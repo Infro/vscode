@@ -109,6 +109,7 @@ export interface IBrowserViewModel extends IDisposable {
 	captureScreenshot(options?: IBrowserViewCaptureScreenshotOptions): Promise<VSBuffer>;
 	dispatchKeyEvent(keyEvent: IBrowserViewKeyDownEvent): Promise<void>;
 	focus(): Promise<void>;
+	blur(): Promise<void>;
 }
 
 export class BrowserViewModel extends Disposable implements IBrowserViewModel {
@@ -293,6 +294,10 @@ export class BrowserViewModel extends Disposable implements IBrowserViewModel {
 
 	async focus(): Promise<void> {
 		return this.browserViewService.focus(this.id);
+	}
+
+	async blur(): Promise<void> {
+		return this.browserViewService.blur(this.id);
 	}
 
 	/**

@@ -428,6 +428,16 @@ export class BrowserView extends Disposable {
 	}
 
 	/**
+	 * Blur (unfocus) the web contents of this view
+	 */
+	async blur(): Promise<void> {
+		// Blur by focusing the parent window instead
+		if (this._window?.win?.webContents && this._view.webContents.isFocused()) {
+			this._window.win.webContents.focus();
+		}
+	}
+
+	/**
 	 * Get the underlying WebContentsView
 	 */
 	getWebContentsView(): WebContentsView {

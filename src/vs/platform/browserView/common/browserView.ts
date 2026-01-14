@@ -204,6 +204,12 @@ export interface IBrowserViewService {
 	focus(id: string): Promise<void>;
 
 	/**
+	 * Blur (unfocus) the browser view web contents
+	 * @param id The browser view identifier
+	 */
+	blur(id: string): Promise<void>;
+
+	/**
 	 * Clear all storage data for the global browser session
 	 */
 	clearGlobalStorage(): Promise<void>;

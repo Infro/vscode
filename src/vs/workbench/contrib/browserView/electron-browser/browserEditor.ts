@@ -5,7 +5,7 @@
 
 import './media/browser.css';
 import { localize } from '../../../../nls.js';
-import { $, addDisposableListener, disposableWindowInterval, EventType, scheduleAtNextAnimationFrame } from '../../../../base/browser/dom.js';
+import { $, addDisposableListener, disposableWindowInterval, EventType, isHTMLElement, scheduleAtNextAnimationFrame } from '../../../../base/browser/dom.js';
 import { renderIcon } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
 import { CancellationToken, CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { RawContextKey, IContextKey, IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -147,6 +147,22 @@ class BrowserNavigationBar extends Disposable {
 	}
 }
 
+// When an element in the workbench receives programmatic focus while the browser view is focused,
+//   we need to make sure the workbench becomes the focused view.
+// But no focus/blur events will be dispatched when the workbench is not already focused.
+// So we manually dispatch a blur event on the container in this case so it can be handled below.
+const originalFocus = HTMLElement.prototype.focus;
+HTMLElement.prototype.focus = function (this: HTMLElement, options?: FocusOptions | undefined): void {
+	const doc = this.ownerDocument;
+	const active = doc.activeElement;
+	if (!doc.hasFocus() && active && active !== this && isHTMLElement(active) && active.className === 'browser-container') {
+		active.dispatchEvent(new FocusEvent('blur', { relatedTarget: this }));
+	}
+
+	// Pass through to original focus() method
+	originalFocus.apply(this, [options]);
+};
+
 export class BrowserEditor extends EditorPane {
 	static readonly ID = 'workbench.editor.browser';
 
@@ -242,11 +258,10 @@ export class BrowserEditor extends EditorPane {
 			}
 		}));
 
-		this._register(addDisposableListener(this._browserContainer, EventType.BLUR, () => {
+		this._register(addDisposableListener(this._browserContainer, EventType.BLUR, (event) => {
 			// When focus goes to another part of the workbench, make sure the workbench view becomes focused.
-			const focused = this.window.document.activeElement;
-			if (focused && focused !== this._browserContainer) {
-				this.window.focus();
+			if (event.relatedTarget && event.relatedTarget !== this._browserContainer) {
+				this._model?.blur();
 			}
 		}));
 	}
@@ -303,8 +318,9 @@ export class BrowserEditor extends EditorPane {
 		}));
 
 		this._inputDisposables.add(this._model.onDidChangeFocus(({ focused }) => {
-			// When the view gets focused, make sure the container also has focus.
+			// When the view gets focused, make sure the editor and container also have focus.
 			if (focused) {
+				this._onDidFocus?.fire();
 				this._browserContainer.focus();
 			}
 		}));
